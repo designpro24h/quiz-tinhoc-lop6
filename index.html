@@ -255,6 +255,7 @@
 //         document.getElementById('reload-btn').style.display = 'block';
 //         window.scrollTo({ top: 0, behavior: 'smooth' });
 //     }
+
 function calculateScore() {
         // 1. Kiểm tra tất cả các câu hỏi xem đã làm hết chưa
         for (let i = 0; i < currentQuestions.length; i++) {
@@ -311,6 +312,7 @@ function calculateScore() {
         // Thay link Web App URL bạn vừa copy từ Google Script vào đây
         const scriptURL = 'https://script.google.com/macros/s/AKfycbxBGx5cOnwrS3p-Je917lqM2qSjeOOK8CZJOZBg_p01X0PfVsqUDIRzE4ZiKdo1lKbL/exec';
         
+        
         const dataToSend = {
             name: studentName,
             score: score,
@@ -326,8 +328,8 @@ function calculateScore() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dataToSend)
         })
-        .then(() => console.log("Dữ liệu đã được gửi đi!"))
-        .catch(err => console.error("Lỗi khi gửi dữ liệu:", err));
+        .then(res => console.log("Phản hồi từ server:", res))
+        .catch(err => alert("Lỗi kết nối: " + err));
 
         // 4. Hiển thị bảng điểm và thông báo lưu thành công
         const res = document.getElementById('result-area');
