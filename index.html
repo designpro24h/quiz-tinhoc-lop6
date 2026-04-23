@@ -198,8 +198,65 @@
     //         </div>
     //     `).join('');
     // }
+// function calculateScore() {
+//         // 1. Kiểm tra tất cả các câu hỏi
+//         for (let i = 0; i < currentQuestions.length; i++) {
+//             const selected = document.querySelector(`input[name="q${i}"]:checked`);
+//             if (!selected) {
+//                 // Nếu phát hiện câu chưa làm
+//                 alert(`Em chưa hoàn thành bài thi! Hãy trả lời câu số ${i + 1}.`);
+                
+//                 // Cuộn đến câu đó và làm nổi bật
+//                 const questionBoxes = document.querySelectorAll('.question-box');
+//                 questionBoxes[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+//                 // Hiệu ứng nhấp nháy đỏ để học sinh chú ý
+//                 questionBoxes[i].style.border = "2px solid #ef4444";
+//                 questionBoxes[i].style.backgroundColor = "#fff5f5";
+                
+//                 return; // Ngừng nộp bài
+//             }
+//         }
+
+//         // 2. Nếu đã làm đủ 56 câu -> Tính điểm
+//         let score = 0;
+//         currentQuestions.forEach((data, index) => {
+//             const selected = document.querySelector(`input[name="q${index}"]:checked`);
+            
+//             const correctIdx = data.a;
+//             const userAns = parseInt(selected.value);
+//             const questionBoxes = document.querySelectorAll('.question-box');
+            
+//             // Reset lại màu nền/viền về mặc định trước khi hiện kết quả
+//             questionBoxes[index].style.border = "1px solid #e2e8f0";
+//             questionBoxes[index].style.backgroundColor = "white";
+
+//             // Hiện đáp án đúng màu xanh
+//             document.getElementById(`li-${index}-${correctIdx}`).classList.add('correct-ans');
+
+//             if (userAns === correctIdx) {
+//                 score++;
+//             } else {
+//                 // Hiện câu sai màu đỏ
+//                 document.getElementById(`li-${index}-${userAns}`).classList.add('wrong-ans');
+//             }
+            
+//             // Khóa bài sau khi nộp
+//             document.querySelectorAll(`input[name="q${index}"]`).forEach(r => r.disabled = true);
+//         });
+
+//         // 3. Hiển thị bảng điểm
+//         const res = document.getElementById('result-area');
+//         res.style.display = 'block';
+//         res.innerHTML = `🏁 Hoàn thành: <strong>${score}/${currentQuestions.length}</strong> câu đúng.<br>
+//                         Điểm số: <strong>${(score/currentQuestions.length*10).toFixed(1)}</strong> / 10`;
+        
+//         document.getElementById('submit-btn').style.display = 'none';
+//         document.getElementById('reload-btn').style.display = 'block';
+//         window.scrollTo({ top: 0, behavior: 'smooth' });
+//     }
 function calculateScore() {
-        // 1. Kiểm tra tất cả các câu hỏi
+        // 1. Kiểm tra tất cả các câu hỏi xem đã làm hết chưa
         for (let i = 0; i < currentQuestions.length; i++) {
             const selected = document.querySelector(`input[name="q${i}"]:checked`);
             if (!selected) {
@@ -218,15 +275,18 @@ function calculateScore() {
             }
         }
 
-        // 2. Nếu đã làm đủ 56 câu -> Tính điểm
+        // 2. Nếu đã làm đủ tất cả các câu -> Tiến hành tính điểm
         let score = 0;
+        const totalQuestions = currentQuestions.length;
+        const studentName = document.getElementById('student-name').value;
+
         currentQuestions.forEach((data, index) => {
             const selected = document.querySelector(`input[name="q${index}"]:checked`);
             const correctIdx = data.a;
             const userAns = parseInt(selected.value);
             const questionBoxes = document.querySelectorAll('.question-box');
             
-            // Reset lại màu nền/viền về mặc định trước khi hiện kết quả
+            // Reset lại màu nền/viền về mặc định
             questionBoxes[index].style.border = "1px solid #e2e8f0";
             questionBoxes[index].style.backgroundColor = "white";
 
@@ -236,22 +296,55 @@ function calculateScore() {
             if (userAns === correctIdx) {
                 score++;
             } else {
-                // Hiện câu sai màu đỏ
+                // Hiện đáp án học sinh chọn sai màu đỏ
                 document.getElementById(`li-${index}-${userAns}`).classList.add('wrong-ans');
             }
             
-            // Khóa bài sau khi nộp
+            // Khóa các ô chọn để không cho sửa lại
             document.querySelectorAll(`input[name="q${index}"]`).forEach(r => r.disabled = true);
         });
 
-        // 3. Hiển thị bảng điểm
+        // Tính điểm hệ 10
+        const finalGrade = (score / totalQuestions * 10).toFixed(1);
+
+        // 3. GỬI DỮ LIỆU LÊN GOOGLE SHEETS
+        // Thay link Web App URL bạn vừa copy từ Google Script vào đây
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxBGx5cOnwrS3p-Je917lqM2qSjeOOK8CZJOZBg_p01X0PfVsqUDIRzE4ZiKdo1lKbL/exec';
+        
+        const dataToSend = {
+            name: studentName,
+            score: score,
+            total: totalQuestions,
+            grade: finalGrade
+        };
+
+        // Sử dụng fetch để đẩy dữ liệu đi
+        fetch(scriptURL, {
+            method: 'POST',
+            mode: 'no-cors', 
+            cache: 'no-cache',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dataToSend)
+        })
+        .then(() => console.log("Dữ liệu đã được gửi đi!"))
+        .catch(err => console.error("Lỗi khi gửi dữ liệu:", err));
+
+        // 4. Hiển thị bảng điểm và thông báo lưu thành công
         const res = document.getElementById('result-area');
         res.style.display = 'block';
-        res.innerHTML = `🏁 Hoàn thành: <strong>${score}/${currentQuestions.length}</strong> câu đúng.<br>
-                        Điểm số: <strong>${(score/currentQuestions.length*10).toFixed(1)}</strong> / 10`;
+        res.innerHTML = `
+            <div style="color: #1e293b;">
+                <p>🏁 Hoàn thành: <strong>${score}/${totalQuestions}</strong> câu đúng.</p>
+                <p style="font-size: 28px; color: #2563eb;">Điểm số: <strong>${finalGrade}</strong> / 10</p>
+                <p style="font-size: 14px; color: #16a34a;">✅ Kết quả của em đã được hệ thống tự động lưu lại.</p>
+            </div>
+        `;
         
+        // Ẩn nút nộp bài, hiện nút làm lại
         document.getElementById('submit-btn').style.display = 'none';
         document.getElementById('reload-btn').style.display = 'block';
+        
+        // Cuộn lên đầu trang để xem điểm
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 </script>
