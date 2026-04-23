@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Thi Trắc Nghiệm Tin Học 6</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #f1f5f9; --text: #1e293b; --success: #22c55e; --error: #ef4444; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        
+        /* Form Đăng Nhập */
+        #login-screen { text-align: center; padding: 40px 20px; }
+        .input-group { margin-bottom: 15px; text-align: left; max-width: 300px; margin-left: auto; margin-right: auto; }
+        .input-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        
+        /* Giao diện bài thi */
+        #quiz-content { display: none; }
+        .user-info-bar { background: #e0f2fe; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; display: flex; justify-content: space-between; }
+        
+        .question-box { margin-bottom: 25px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; }
+        .question-text { font-weight: 700; margin-bottom: 15px; display: block; color: #334155; }
+        .options { list-style: none; padding: 0; }
+        .options li { margin: 10px 0; padding: 12px; border-radius: 8px; border: 1px solid #f1f5f9; display: flex; align-items: center; cursor: pointer; transition: 0.2s; }
+        .options li:hover { background: #f8fafc; }
+        input[type="radio"] { margin-right: 12px; transform: scale(1.2); }
+
+        /* Màu sắc kết quả */
+        .correct-ans { background: #dcfce7 !important; border-color: var(--success) !important; font-weight: bold; }
+        .wrong-ans { background: #fee2e2 !important; border-color: var(--error) !important; }
+
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-blue { background: var(--primary); color: white; }
+        .btn-blue:hover { background: #1d4ed8; }
+        #result-area { margin-top: 25px; padding: 20px; border-radius: 10px; text-align: center; display: none; font-size: 22px; background: #eff6ff; border: 1px solid #bfdbfe; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="login-screen">
+        <h2>HỆ THỐNG THI TRỰC TUYẾN</h2>
+        <p style="color: #64748b;">Vui lòng nhập thông tin để bắt đầu bài thi</p>
+        <div class="input-group">
+            <label>Họ và Tên:</label>
+            <input type="text" id="student-name" placeholder="Nhập tên của em...">
+        </div>
+        <div class="input-group">
+            <label>Mật khẩu:</label>
+            <input type="password" id="password" placeholder="Mật khẩu mặc định...">
+        </div>
+        <button class="btn btn-blue" onclick="checkLogin()">VÀO THI</button>
+        <p id="login-error" style="color: red; margin-top: 10px; display: none;">❌ Sai mật khẩu hoặc chưa nhập tên!</p>
+    </div>
+
+    <div id="quiz-content">
+        <div id="result-area"></div>
+        <button class="btn" id="reload-btn" style="display:none; margin-top:10px; background:#64748b; color:white;" onclick="location.reload()">LÀM LẠI BÀI MỚI</button>
+        <div class="user-info-bar">
+            <span>Học sinh: <span id="display-name" style="color: var(--primary);"></span></span>
+            <span id="timer">Đang làm bài...</span>
+        </div>
+        <div id="quiz-wrapper"></div>
+        <button class="btn btn-blue" id="submit-btn" onclick="calculateScore()">NỘP BÀI & XEM ĐÁP ÁN</button>
+        
+    </div>
+</div>
+<script>
+    const quizData = [
+        { q: "Công cụ tìm kiếm và thay thế nằm trên dải lệnh:", options: ["Home", "Insert", "Page layout", "Mailings"], a: 0 },
+        { q: "Để sử dụng lệnh tìm kiếm, trong nhóm Editing, ta click chuột vào:", options: ["Select", "Find", "Replace", "Change styles"], a: 1 },
+        { q: "Lệnh Find dùng để tìm các đối tượng nào trong văn bản?", options: ["Một kí tự, cụm từ", "Các dấu cách", "Định dạng chữ nghiêng", "Tất cả các đối tượng trên"], a: 3 },
+        { q: "Để sử dụng công cụ Tìm kiếm và Thay thế ta sử dụng hộp thoại:", options: ["Find and Replace", "Open", "Insert Picture", "Clipboard"], a: 0 },
+        { q: "Trong hộp thoại 'Find and Replace', để bỏ qua một từ không muốn thay thế, chọn:", options: ["Replace All", "Replace", "Find Next", "Cancel"], a: 2 },
+        { q: "Lệnh Find được sử dụng khi nào?", options: ["Khi muốn định dạng chữ in nghiêng cho đoạn văn bản.", "Khi muốn tìm kiếm một từ hoặc cụm từ trong đoạn văn bản", "Khi muốn thay thế một từ hoặc cụm từ trong văn bản", "Khi cần thay đổi phông chữ của văn bản"], a: 1 },
+        { q: "Để định dạng đoạn văn em sử dụng hộp thoại nào?", options: ["Home/ Font", "Insert/ Paragraph", "Home/ Paragraph", "File/ Paragraph"], a: 2 },
+        { q: "Một văn bản gồm có bao nhiêu lề?", options: ["3 Lề", "4 Lề", "5 Lề", "6 Lề"], a: 1 },
+        { q: "Đâu không phải là yêu cầu cơ bản khi trình bày trang văn bản:", options: ["Chọn bản in", "Chọn hướng trang", "Đặt lề trang", "Lựa chọn khổ giấy"], a: 0 },
+        { q: "Các lệnh định dạng trang văn bản nằm trong thẻ nào?", options: ["Page layout", "Design", "Paragraph", "Font"], a: 0 },
+
+        // --- Dữ liệu từ ảnh 2 (Câu 11 - 20) ---
+        { q: "Phần mềm soạn thảo văn bản không có chức năng nào sau đây?", options: ["Nhập văn bản", "Sửa đổi, chỉnh sửa văn bản", "Lưu trữ và in văn bản", "Chỉnh sửa hình ảnh và âm thanh"], a: 3 },
+        { q: "Để định dạng trang, ta cần thực hiện lệnh:", options: ["File -> Page Setup...", "Edit -> Page Setup...", "File -> Print Setup...", "Format -> Page Setup..."], a: 0 },
+        { q: "Để đặt hướng cho trang văn bản, trên thẻ Page Layout vào nhóm lệnh Page Setup sử dụng lệnh:", options: ["Orientation", "Size", "Margins", "Columns"], a: 0 },
+        { q: "Trong phần mềm soạn thảo văn bản Word 2010, lệnh Portrait dùng để:", options: ["Chọn hướng trang đứng", "Chọn hướng trang ngang", "Chọn lề trang", "Chọn lề đoạn văn bản"], a: 0 },
+        { q: "Thao tác nào không phải là thao tác định dạng văn bản?", options: ["Thay đổi kiểu chữ thành chữ nghiêng", "Chọn chữ màu xanh", "Căn giữa đoạn văn bản", "Thêm hình ảnh vào văn bản"], a: 3 },
+        { q: "Các phần văn bản được phân cách nhau bởi dấu ngắt đoạn được gọi là?", options: ["Dòng", "Trang", "Đoạn", "Câu"], a: 2 },
+        { q: "Việc phải làm đầu tiên khi muốn thiết lập định dạng cho một đoạn văn bản là:", options: ["Vào thẻ Home, chọn nhóm lệnh Paragraph", "Cần phải chọn toàn bộ đoạn văn bản", "Đưa con trỏ soạn thảo vào vị trí bất kì trong đoạn văn bản", "Nhấn phím Enter"], a: 2 },
+        { q: "Công việc nào dưới đây không liên quan đến định dạng văn bản?", options: ["Thay đổi phông chữ", "Thay đổi khoảng cách giữa các dòng", "Đổi kích thước trang giấy", "Sửa lỗi chính tả"], a: 3 },
+        { q: "Muốn căn lề nhanh ta cần:", options: ["Chọn mẫu lề có sẵn trong dải lệnh Page Layout/ Page setup", "Chọn mẫu lề có sẵn trong dải lệnh Page Layout/ Paragraph", "Chọn mẫu lề có sẵn trong dải lệnh Page Layout/ Page Background", "Chọn mẫu lề có sẵn trong dải lệnh Page Layout/ Themes"], a: 0 },
+        { q: "Đâu không phải là thông tin dạng bảng?", options: ["Bảng thời khóa biểu", "Bảng danh sách lớp", "Bảng hiệu cửa hàng ăn", "Bảng điểm"], a: 2 },
+
+        // --- Dữ liệu bổ sung từ ảnh 3 (Câu 21 - 30) ---
+        { q: "Em có thể sử dụng lệnh nào sau đây để tạo bảng?", options: ["Insert/Table", "View/Table", "File/Table", "Review/Table"], a: 0 },
+        { q: "Có mấy bước thực hiện tạo bảng?", options: ["2 bước", "3 bước", "4 bước", "5 bước"], a: 1 },
+        { q: "Nhu cầu xử lý thông tin dạng bảng là:", options: ["Dễ so sánh", "Dễ in ra giấy", "Dễ học hỏi", "Dễ di chuyển"], a: 0 },
+        { q: "Sử dụng lệnh Insert/Table rồi dùng chuột kéo thả, số cột và số hàng tối đa có thể tạo nhanh được là:", options: ["10 cột, 10 hàng", "10 cột, 8 hàng", "8 cột, 8 hàng", "8 cột, 10 hàng"], a: 1 },
+        { q: "Độ rộng của cột và độ cao của hàng sau khi được tạo?", options: ["Luôn luôn bằng nhau", "Có thể thay đổi", "Không thể thay đổi", "Cả 3 phương án trên đều sai"], a: 1 },
+        { q: "Khi con trỏ văn bản đang nằm bên trong bảng thì lệnh định dạng văn bản được áp dụng cho?", options: ["Ô con trỏ văn bản đang nằm", "Cả bảng", "Cột con trỏ văn bản đang nằm", "Dòng con trỏ văn bản đang nằm"], a: 0 },
+        { q: "Ý nào sau đây chưa đúng?", options: ["Delete Columns: Xoá cột đã chọn", "Delete Rows: Xoá hàng đã chọn", "Split Cells: Thêm ô", "Merge Cells: Gộp nhiều ô thành một ô"], a: 2 },
+        { q: "Cách di chuyển con trỏ soạn thảo trong bảng là:", options: ["Chỉ sử dụng các phím mũi tên trên bàn phím", "Chỉ sử dụng chuột", "Sử dụng thanh cuộn ngang, dọc", "Có thể sử dụng chuột, phím Tab hoặc các phím mũi tên trên bàn phím"], a: 3 },
+        { q: "Muốn xóa bảng, sau khi chọn cả bảng, nháy chuột phải vào ô bất kì trong bảng rồi chọn lệnh:", options: ["Delete Rows", "Delete Table", "Delete Columns", "Delete Cells"], a: 1 },
+        { q: "Để chèn một bảng có 30 hàng và 10 cột, em sử dụng thao tác nào?", options: ["Chọn lệnh Insert/Table, kéo thả chuột chọn 30 hàng, 10 cột", "Chọn lệnh Insert/Table/Table Tools, nhập 30 hàng, 10 cột", "Chọn lệnh Insert/Table/Insert Table, nhập 30 hàng, 10 cột", "Chọn lệnh Table Tools/Layout, nhập 30 hàng, 10 cột"], a: 2 },
+
+        // --- Dữ liệu bổ sung từ ảnh 4 (Câu 31 - 40) ---
+        { q: "Khi làm việc với Word xong muốn thoát khỏi, ta thực hiện:", options: ["View/Exit", "Home/Exit", "File/Exit", "Review/Exit"], a: 2 },
+        { q: "Người ta thường dùng sơ đồ tư duy để:", options: ["Học các kiến thức mới", "Không cần phải suy nghĩ gì thêm khi học tập", "Ghi nhớ tốt hơn", "Bảo vệ thông tin cá nhân"], a: 2 },
+        { q: "Để tạo sơ đồ tư duy em cần phải:", options: ["Vẽ chủ đề chính ở bên phải tờ giấy", "Tạo nhánh từ các chủ đề phụ", "Thêm từ khóa, tạo các nhánh và chọn màu khác nhau", "Xác định chủ đề chính, tạo nhánh, thêm từ khóa và chọn màu khác nhau cho nhánh"], a: 3 },
+        { q: "Sơ đồ tư duy được tạo nên bởi:", options: ["Âm thanh, hình ảnh, màu sắc", "Chủ đề chính, chủ đề nhánh, các đường nối", "Các kiến thức em được học", "Các ý nghĩ trong đầu em"], a: 1 },
+        { q: "Đâu không phải là ưu điểm khi vẽ sơ đồ tư duy bằng máy tính:", options: ["Dễ sắp xếp, bố trí, thay đổi, thêm bớt nội dung", "Dễ sử dụng cho các mục đích khác: đưa vào bài trình chiếu, gửi qua gmail", "Có thể thực hiện ở bất cứ đâu, chỉ cần đủ đồ dùng", "Dễ dàng chia sẻ cho nhiều người ở các địa điểm khác nhau"], a: 2 },
+        { q: "Để lập một sơ đồ tư duy đơn giản, cần thực hiện mấy bước:", options: ["3 bước", "4 bước", "5 bước", "6 bước"], a: 1 },
+        { q: "Vẽ sơ đồ tư duy, ta thực hiện như sau:", options: ["Triển khai chi tiết -> Triển khai chi tiết chủ đề chính -> Thể hiện chủ đề trung tâm -> Bổ sung nhánh", "Triển khai chi tiết -> Bổ sung nhánh -> Triển khai chi tiết chủ đề chính -> Thể hiện chủ đề trung tâm", "Thể hiện chủ đề trung tâm -> Triển khai chi tiết chủ đề trung tâm -> Triển khai chi tiết cho các chủ đề chính -> Bổ sung nhánh mới", "Triển khai chi tiết chủ đề chính -> Bổ sung nhánh -> Thể hiện chủ đề trung tâm -> Triển khai chi tiết"], a: 2 },
+        { q: "Nhược điểm của việc tạo sơ đồ tư duy theo cách thủ công là gì?", options: ["Khó sắp xếp, bố trí nội dung", "Hạn chế khả năng sáng tạo", "Không linh hoạt để có thể làm ở bất cứ đâu", "Không dễ dàng trong việc mở rộng, sửa chữa và chia sẻ cho nhiều người"], a: 3 },
+        { q: "Phát biểu nào không phải là ưu điểm của việc tạo sơ đồ tư duy bằng phần mềm máy tính?", options: ["Có thể sắp xếp, bố trí với không gian rộng mở", "Có thể chia sẻ được cho nhiều người", "Có thể làm ở bất cứ đâu, không cần công cụ hỗ trợ", "Có thể kết hợp và chia sẻ để sử dụng cho các phần mềm khác"], a: 2 },
+        { q: "Phát biểu nào sai về việc tạo sơ đồ tư duy tốt?", options: ["Đường kẻ gần hình trung tâm nên tô đậm và dày hơn", "Nên dùng đường kẻ cong thay vì đường thẳng", "Nên bố trí thông tin đều quanh hình trung tâm", "Không nên sử dụng màu sắc vì làm người xem mất tập trung"], a: 3 },
+        // --- Dữ liệu bổ sung từ ảnh 5 (Câu 41 - 56) ---
+        { q: "Giáo viên yêu cầu học sinh làm sổ lưu niệm lớp bằng sơ đồ tư duy. Theo em, đâu không phải chủ đề nhánh:", options: ["Các bài viết cảm nghĩ", "Hình ảnh kỉ niệm", "Hạnh kiểm của các thành viên", "Hoạt động sự kiện"], a: 2 },
+        { q: "Trong các công việc hàng ngày chúng ta cần làm gì để có hiệu quả?", options: ["Cần có kế hoạch cụ thể cho từng công việc", "Nhờ người khác làm giúp công việc", "Thuê người khác làm thay công việc của mình", "Gặp công việc nào làm công việc đó"], a: 0 },
+        { q: "Khi một công việc lớn có nhiều việc nhỏ, ta cần làm gì để công việc dễ dàng thực hiện hơn?", options: ["Cần có kế hoạch cụ thể cho từng công việc nhỏ", "Tìm hướng giải quyết công việc lớn luôn", "Chia công việc lớn thành nhiều công việc nhỏ và lên kế hoạch giải quyết từng công việc nhỏ để hoàn thành công việc lớn", "Chia công việc lớn thành nhiều công việc nhỏ"], a: 2 },
+        { q: "Trong các câu sau đây câu nào đúng?", options: ["Bài toán là một vấn đề phải giải quyết bằng tính toán", "Bài toán là một nhiệm vụ cần hoàn thành, đã xác định rõ ràng đầu vào", "Thuật toán là cách để tính toán nhanh", "Thuật toán là một quy trình chặt chẽ gồm một số bước, có chỉ rõ trình tự thực hiện để hoàn thành nhiệm vụ"], a: 3 },
+        { q: "Khi các công việc sắp xếp lộn xộn thì em cần làm gì?", options: ["Thực hiện công việc theo thứ tự tự do", "Cần sắp xếp lại theo một trình tự đảm bảo tính khoa học và logic", "Tìm các các công việc dễ để thực hiện trước", "Bỏ qua công việc không cần thực hiện"], a: 1 },
+        { q: "Thuật toán có thể được mô tả bằng:", options: ["Ngôn ngữ viết", "Ngôn ngữ kí hiệu", "Ngôn ngữ logic toán học", "Ngôn ngữ tự nhiên (liệt kê các bước) và sơ đồ khối"], a: 3 },
+        { q: "Việc xác định bài toán là đi xác định các thành phần nào?", options: ["Input", "Output", "Input và Output", "Không có thành phần nào"], a: 2 },
+        { q: "Input là gì?", options: ["Thuật toán", "Bài toán", "Thông tin vào", "Chương trình"], a: 2 },
+        { q: "Trong các ví dụ sau, ví dụ nào là thuật toán?", options: ["Một bản nhạc hay", "Một bức tranh đầy màu sắc", "Một bản hướng dẫn về cách nướng bánh với các bước cần làm", "Một bài thơ lục bát"], a: 2 },
+        { q: "Output là gì?", options: ["Thông tin ra", "Thông tin vào", "Thuật toán", "Chương trình"], a: 0 },
+        { q: "Với mỗi phát biểu sau đây, hãy cho biết phát biểu nào đúng:", options: ["Chỉ có một thuật toán để giải một bài toán", "Đầu ra của bài toán cũng là đầu ra của thuật toán", "Có thể có nhiều thuật toán để giải một bài toán", "Đầu vào của bài toán khác với đầu vào của thuật toán"], a: 2 },
+        { q: "Trong các ví dụ sau, đâu là thuật toán?", options: ["Một dãy các bước hướng dẫn tính diện tích của hình thang cân", "Một bài văn tả cảnh hoàng hôn ở biển", "Một bài hát mang âm điệu dân gian", "Một bản nhạc tình ca"], a: 0 },
+        { q: "Phát biểu nào sau đây là đúng?", options: ["Mỗi bài toán chỉ có duy nhất một thuật toán để giải", "Trình tự thực hiện các bước trong thuật toán không quan trọng", "Trong thuật toán, với dữ liệu đầu vào luôn xác định được kết quả đầu ra", "Một thuật toán có thể không có đầu vào và đầu ra"], a: 2 },
+        { q: "Thuật toán 'Tìm số lớn hơn trong hai số a, b'. Đầu ra là:", options: ["Hai số a, b", "Số lớn hơn", "Số bé hơn", "Số bằng nhau"], a: 1 },
+        { q: "Thuật toán 'Nhân đôi số a'. Đầu ra là:", options: ["Số a", "Giá trị a", "Giá trị '2 x a'", "Giá trị '4 x a'"], a: 2 },
+        { q: "Bạn Tuấn viết một thuật toán bằng cách ghi ra từng bước. Bước đầu tiên là 'Thức dậy'. Bước tiếp theo là gì?", options: ["Đánh răng", "Thay quần áo", "Đi tắm", "Ra khỏi giường"], a: 3 }
+
+    ];
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    let currentQuestions = [];
+
+    function checkLogin() {
+        const name = document.getElementById('student-name').value;
+        const pass = document.getElementById('password').value;
+        const errorMsg = document.getElementById('login-error');
+
+        if (name.trim() !== "" && pass === "@02022014") {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('quiz-content').style.display = 'block';
+            document.getElementById('display-name').innerText = name;
+            initQuiz();
+        } else {
+            errorMsg.style.display = 'block';
+            errorMsg.innerText = (pass !== "@02022014") ? "❌ Mật khẩu không chính xác!" : "❌ Vui lòng nhập họ tên!";
+        }
+    }
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+    function initQuiz() {
+        const wrapper = document.getElementById('quiz-wrapper');
+        
+        // Trộn toàn bộ kho câu hỏi (56 câu) và không cắt bớt (xóa .slice)
+        currentQuestions = shuffle([...quizData]);
+        
+        wrapper.innerHTML = currentQuestions.map((data, index) => `
+            <div class="question-box">
+                <span class="question-text">Câu ${index + 1}: ${data.q}</span>
+                <ul class="options">
+                    ${data.options.map((opt, i) => `
+                        <li id="li-${index}-${i}">
+                            <input type="radio" name="q${index}" value="${i}" id="q${index}_${i}">
+                            <label for="q${index}_${i}" style="width:100%; cursor:pointer;">${opt}</label>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        `).join('');
+    }
+    // function initQuiz() {
+    //     const wrapper = document.getElementById('quiz-wrapper');
+    //     // Trộn và lấy ngẫu nhiên 20 câu để làm bài cho đỡ dài, hoặc bỏ .slice(0,20) để làm hết 56 câu
+    //     currentQuestions = shuffle([...quizData]).slice(0, 20);
+        
+    //     wrapper.innerHTML = currentQuestions.map((data, index) => `
+    //         <div class="question-box">
+    //             <span class="question-text">Câu ${index + 1}: ${data.q}</span>
+    //             <ul class="options">
+    //                 ${data.options.map((opt, i) => `
+    //                     <li id="li-${index}-${i}">
+    //                         <input type="radio" name="q${index}" value="${i}" id="q${index}_${i}">
+    //                         <label for="q${index}_${i}" style="width:100%; cursor:pointer;">${opt}</label>
+    //                     </li>
+    //                 `).join('')}
+    //             </ul>
+    //         </div>
+    //     `).join('');
+    // }
+function calculateScore() {
+        // 1. Kiểm tra tất cả các câu hỏi
+        for (let i = 0; i < currentQuestions.length; i++) {
+            const selected = document.querySelector(`input[name="q${i}"]:checked`);
+            if (!selected) {
+                // Nếu phát hiện câu chưa làm
+                alert(`Em chưa hoàn thành bài thi! Hãy trả lời câu số ${i + 1}.`);
+                
+                // Cuộn đến câu đó và làm nổi bật
+                const questionBoxes = document.querySelectorAll('.question-box');
+                questionBoxes[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Hiệu ứng nhấp nháy đỏ để học sinh chú ý
+                questionBoxes[i].style.border = "2px solid #ef4444";
+                questionBoxes[i].style.backgroundColor = "#fff5f5";
+                
+                return; // Ngừng nộp bài
+            }
+        }
+
+        // 2. Nếu đã làm đủ 56 câu -> Tính điểm
+        let score = 0;
+        currentQuestions.forEach((data, index) => {
+            const selected = document.querySelector(`input[name="q${index}"]:checked`);
+            const correctIdx = data.a;
+            const userAns = parseInt(selected.value);
+            const questionBoxes = document.querySelectorAll('.question-box');
+            
+            // Reset lại màu nền/viền về mặc định trước khi hiện kết quả
+            questionBoxes[index].style.border = "1px solid #e2e8f0";
+            questionBoxes[index].style.backgroundColor = "white";
+
+            // Hiện đáp án đúng màu xanh
+            document.getElementById(`li-${index}-${correctIdx}`).classList.add('correct-ans');
+
+            if (userAns === correctIdx) {
+                score++;
+            } else {
+                // Hiện câu sai màu đỏ
+                document.getElementById(`li-${index}-${userAns}`).classList.add('wrong-ans');
+            }
+            
+            // Khóa bài sau khi nộp
+            document.querySelectorAll(`input[name="q${index}"]`).forEach(r => r.disabled = true);
+        });
+
+        // 3. Hiển thị bảng điểm
+        const res = document.getElementById('result-area');
+        res.style.display = 'block';
+        res.innerHTML = `🏁 Hoàn thành: <strong>${score}/${currentQuestions.length}</strong> câu đúng.<br>
+                        Điểm số: <strong>${(score/currentQuestions.length*10).toFixed(1)}</strong> / 10`;
+        
+        document.getElementById('submit-btn').style.display = 'none';
+        document.getElementById('reload-btn').style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+</script>
+
+</body>
+</html>
